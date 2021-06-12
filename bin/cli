@@ -1,0 +1,109 @@
+#!/usr/bin/env node
+
+const args = process.argv;
+const path = require("path");
+const { exec } = require("child_process");
+const bcrypt = require("bcryptjs");
+
+function getRootPath() {
+  return path.dirname(require.main.filename);
+}
+
+const COMMANDS = ["mig:gen", "mig:run", "pass:gen"];
+
+function usage() {
+  const description = `
+  Basic CLI app.
+
+  usage:
+    cli <command>
+
+    commands can be:
+
+    # MIGRATIONS
+    mig:gen {{name}}:       used to generate migration
+    mig:run:                run pending migrations
+    
+    # PASSWORD
+    pass:gen {{password}}   hash a password
+    help:                   used to print the usage guide
+`;
+
+  console.log(description);
+}
+
+function generateMigration(name) {
+  return exec(
+    `./node_modules/ts-node/dist/bin.js ./node_modules/typeorm/cli.js migration:generate -n ${name}`,
+    (error, stdout, stderr) => {
+      if (error) {
+        console.log(`error: ${error.message}`);
+        return;
+      }
+      if (stderr) {
+        console.log(`stderr: ${stderr}`);
+        return;
+      }
+      console.log(`stdout: ${stdout}`);
+    },
+  );
+}
+
+function runMigration() {
+  return exec(
+    `./node_modules/ts-node/dist/bin.js ./node_modules/typeorm/cli.js migration:run`,
+    (error, stdout, stderr) => {
+      if (error) {
+        console.log(`error: ${error.message}`);
+        return;
+      }
+      if (stderr) {
+        console.log(`stderr: ${stderr}`);
+        return;
+      }
+      console.log(`stdout: ${stdout}`);
+    },
+  );
+}
+
+function hashPassword(password) {
+  return bcrypt.hash(password, 10, function (err, hash) {
+    if (err) {
+      throw new Error(err);
+    }
+    console.log(hash);
+    return hash;
+  });
+}
+
+if (COMMANDS.indexOf(args[2]) === -1) {
+  console.log("Invalid command passed");
+  usage();
+}
+
+switch (args[2]) {
+  case "help":
+    usage();
+    break;
+  case "mig:gen":
+    if (args[3] && args[3] !== "") {
+      generateMigration(args[3]);
+      break;
+    }
+    console.log("Wrong parameter passed");
+    usage();
+    break;
+  case "mig:run":
+    runMigration();
+    break;
+  case "pass:gen":
+    if (args[3] && args[3] !== "") {
+      hashPassword(args[3]);
+      break;
+    }
+    console.log("Wrong parameter passed");
+    break;
+  default:
+    console.log("Invalid command passed");
+    usage();
+}
